@@ -1,0 +1,73 @@
+<!-- index.html - simple frontend to fetch problems and submit answers -->
+<!doctype html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Multiplication Trainer</title>
+</head>
+
+<body>
+	<h1>Multiplication Trainer</h1>
+	<div>
+		<label>Problems to fetch: <input id="n" value="8" /></label>
+		<label>Factor X (optional): <input id="factor_x" /></label>
+		<label>Exclude factors (csv): <input id="exclude_factors" placeholder="10,20,30" /></label>
+		<button id="fetch">Fetch Problems</button>
+	</div>
+
+	<ul id="problems"></ul>
+
+	<script>
+		async function fetchProblems() {
+			const n = document.getElementById("n").value || 8;
+			const factor_x = document.getElementById("factor_x").value;
+			const exclude_factors = document.getElementById("exclude_factors").value;
+			const params = new URLSearchParams({ n });
+			if (factor_x) params.set("factor_x", factor_x);
+			if (exclude_factors) params.set("exclude_factors", exclude_factors);
+			// exclude mastered, assume user_id 1
+			params.set("exclude_mastered", "1");
+			params.set("user_id", "1");
+
+			const res = await fetch("/api/problems?" + params.toString());
+			const problems = await res.json();
+			const list = document.getElementById("problems");
+			list.innerHTML = "";
+			problems.forEach(p => {
+				const li = document.createElement("li");
+				li.innerHTML = `
+          <span>${p.multiplicand} × ${p.multiplier} = </span>
+          <input type="number" class="answer" data-a="${p.multiplicand}" data-b="${p.multiplier}" />
+          <button class="submit">Submit</button>
+          <span class="result"></span>
+        `;
+				list.appendChild(li);
+			});
+
+			document.querySelectorAll(".submit").forEach(btn => {
+				btn.onclick = async (e) => {
+					const li = e.target.closest("li");
+					const input = li.querySelector(".answer");
+					const a = parseInt(input.dataset.a, 10);
+					const b = parseInt(input.dataset.b, 10);
+					const val = parseInt(input.value, 10);
+					const was_correct = (val === a * b);
+					// mark attempt
+					await fetch("/api/attempt", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ user_id: 1, multiplicand: a, multiplier: b, was_correct })
+					});
+					li.querySelector(".result").textContent = was_correct ? "Correct ✓" : `Wrong ✗ (answer: ${a * b})`;
+				};
+			});
+		}
+
+		document.getElementById("fetch").addEventListener("click", fetchProblems);
+		// initial fetch
+		fetchProblems();
+	</script>
+</body>
+
+</html>
