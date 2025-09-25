@@ -1,6 +1,6 @@
 # app.py - Flask + SQLite single-file app
 # Run: python app.py
-from flask import Flask, g, request, jsonify
+from flask import Flask, g, request, jsonify, render_template
 import sqlite3
 import os
 
@@ -8,6 +8,9 @@ DB_PATH = "multiplication.db"
 MASTERy_THRESHOLD_DEFAULT = 3
 
 app = Flask(__name__)
+@app.route("/")
+def home():
+    return render_template("index.html")
 
 def get_db():
     db = getattr(g, "_db", None)
